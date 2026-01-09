@@ -4,6 +4,9 @@
 FROM node:18-alpine AS builder
 WORKDIR /app
 
+# Install OpenSSL and other dependencies required for Prisma
+RUN apk add --no-cache openssl libc6-compat
+
 # Copy package files
 COPY package*.json ./
 
@@ -22,6 +25,9 @@ RUN npx prisma generate
 # --- Stage 2: Production Image ---
 FROM node:18-alpine
 WORKDIR /app
+
+# Install OpenSSL and other dependencies required for Prisma runtime
+RUN apk add --no-cache openssl libc6-compat
 
 # Install production dependencies only
 COPY package*.json ./
