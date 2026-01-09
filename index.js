@@ -175,6 +175,39 @@ if (NODE_ENV === 'production') {
     console.error('   Run: cd client && npm run build');
   }
   
+  // Middleware to serve Brotli compressed files if available
+  app.use((req, res, next) => {
+    // Only handle static assets (JS, CSS, etc.), not HTML files
+    if (req.path.startsWith('/api') || req.path.endsWith('.html')) {
+      return next();
+    }
+    
+    // Check if client accepts Brotli compression
+    const acceptEncoding = req.headers['accept-encoding'] || '';
+    if (acceptEncoding.includes('br')) {
+      const brPath = path.join(clientPath, req.path + '.br');
+      if (fs.existsSync(brPath)) {
+        // Set appropriate content type based on original file extension
+        const ext = path.extname(req.path);
+        const contentTypes = {
+          '.js': 'application/javascript',
+          '.css': 'text/css',
+          '.json': 'application/json',
+          '.svg': 'image/svg+xml',
+          '.woff': 'font/woff',
+          '.woff2': 'font/woff2',
+        };
+        if (contentTypes[ext]) {
+          res.setHeader('Content-Type', contentTypes[ext]);
+        }
+        res.setHeader('Content-Encoding', 'br');
+        res.setHeader('Vary', 'Accept-Encoding');
+        return res.sendFile(brPath);
+      }
+    }
+    next();
+  });
+  
   // Serve static files from dist directory
   app.use(express.static(clientPath));
   
