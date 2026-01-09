@@ -1,43 +1,53 @@
 # Multi-stage build for React frontend and Node backend
 
-# --- Stage 1: Build Frontend ---
-FROM node:18-alpine AS frontend-builder
-WORKDIR /app/client
-COPY client/package*.json ./
+# --- Stage 1: Build Frontend and Backend ---
+FROM node:18-alpine AS builder
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including devDependencies for building)
 RUN npm install
-COPY client/ ./
+
+# Copy source code
+COPY . .
+
+# Build frontend (outputs to client/dist)
 RUN npm run build
 
-# --- Stage 2: Build Backend ---
-FROM node:18-alpine AS backend-builder
-WORKDIR /app/server
-COPY server/package*.json ./
-RUN npm install
-COPY server/ ./
 # Generate Prisma Client
 RUN npx prisma generate
 
-# --- Stage 3: Production Image ---
+# --- Stage 2: Production Image ---
 FROM node:18-alpine
 WORKDIR /app
 
-# Install production dependencies for backend only
-COPY server/package*.json ./
+# Install production dependencies only
+COPY package*.json ./
 RUN npm install --production
 
-# Copy backend source
-COPY server/ ./
-# Copy built frontend assets to backend's public directory (or specific static folder)
-COPY --from=frontend-builder /app/client/dist ./public
-# Copy Prisma artifacts
-COPY --from=backend-builder /app/server/node_modules/.prisma ./node_modules/.prisma
-COPY --from=backend-builder /app/server/node_modules/@prisma ./node_modules/@prisma
+# Copy backend source files
+COPY index.js ./
+COPY entrypoint.sh ./
+RUN chmod +x entrypoint.sh
 
-# Create data directory
+# Copy Prisma schema and generated client
+COPY prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Copy built frontend assets
+COPY --from=builder /app/client/dist ./client/dist
+
+# Create data directory for SQLite database
 RUN mkdir -p /app/data
 
-# Expose port
-EXPOSE 3000
+# Expose port (matching index.js default port 8080)
+EXPOSE 8080
 
-# Start command (Run migrations and start server)
-CMD ["sh", "-c", "npx prisma migrate deploy && node index.js"]
+# Set production environment
+ENV NODE_ENV=production
+
+# Start command: run migrations and start server in production mode
+CMD ["sh", "-c", "npx prisma migrate deploy && NODE_ENV=production node index.js"]
