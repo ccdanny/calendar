@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=file:/app/data/calendar.db
+      - API_SECRET=change_me_to_a_secure_random_string
+      - NODE_ENV=production
+    restart: unless-stopped

@@ -9,68 +9,80 @@
 - **异地灾备**：提供自动化脚本，支持将数据备份至 NAS 或异地服务器。
 - **报表导出**：一键导出年度/月度加班工时统计。
 
----
 
-## 🚀 部署指南 (Server)
+## 🚀 启动方式
 
-### 1. 准备工作
-确保你的服务器已安装 `Docker` 和 `Docker Compose`。
+### 本地开发模式（默认）
+```bash
+npm start
+# 或
+node index.js
+# 或
+NODE_ENV=development node index.js
+```
 
-### 2. 启动服务
-1. 将本项目上传至服务器。
-2. 修改 `docker-compose.yml` 中的环境变量：
-   - `API_SECRET`: 设置一个复杂的密钥（用于 Webhook 校验）。
-3. 启动容器：
-   ```bash
-   cd my-calendar
-   docker-compose up -d
-   ```
-4. 访问服务：`http://<服务器IP>:3000`
+### 本地生产模式
+```bash
+npm run start:prod
+# 或
+NODE_ENV=production node index.js
+```
 
----
+### 开发模式（热重载）
+```bash
+npm run dev
+```
 
-## ⌚ 自动化打卡配置 (macOS)
+## 🐳 容器中启动
 
-该功能利用 Mac 的状态变化触发下班时间上报。
+### 使用 entrypoint.sh 脚本
 
-1. **安装 Hammerspoon**：[官网下载](https://www.hammerspoon.org/)。
-2. **配置脚本**：
-   - 打开或创建 `~/.hammerspoon/init.lua`。
-   - 拷贝本项目 `scripts/hammerspoon_init.lua` 中的内容。
-   - **修改以下关键变量**：
-     - `wifiName`: 你公司的 WiFi SSID 名称。
-     - `secretKey`: 必须与服务器 `API_SECRET` 一致。
-     - `apiEndpoint`: 你的服务器 API 地址（如 `http://1.2.3.4:3000/api/webhook/clock-out`）。
-3. **启用**：在 Hammerspoon 菜单点击 `Reload Config`。
+**开发模式（默认）：**
+```bash
+./entrypoint.sh
+# 或
+./entrypoint.sh development
+```
 
----
+**生产模式：**
+```bash
+./entrypoint.sh production
+# 或
+./entrypoint.sh prod
+```
 
-## 💾 数据备份 (NAS/Cloud)
+### 使用 Docker 命令
 
-数据库文件位于 `./data/calendar.db`。
+**开发模式：**
+```bash
+docker run -e NODE_ENV=development your-image
+# 或使用 entrypoint.sh
+docker run your-image ./entrypoint.sh development
+```
 
-1. **配置脚本**：修改 `scripts/backup.sh` 中的路径和 NAS 地址。
-2. **设置定时任务**：
-   ```bash
-   crontab -e
-   # 每天凌晨 3 点执行备份
-   0 3 * * * /bin/bash /path/to/my-calendar/scripts/backup.sh
-   ```
+**生产模式：**
+```bash
+docker run -e NODE_ENV=production your-image
+# 或使用 entrypoint.sh
+docker run your-image ./entrypoint.sh production
+```
 
----
+### 使用 Docker Compose
 
-## 🛠️ 技术栈
-- **Frontend**: React, Vite, Ant Design, chinese-days
-- **Backend**: Node.js, Express, Prisma
-- **Database**: SQLite
-- **Automation**: Hammerspoon (Lua)
+在 `docker-compose.yml` 中设置：
+```yaml
+services:
+  app:
+    environment:
+      - NODE_ENV=production
+    # 或使用 entrypoint
+    command: ["./entrypoint.sh", "production"]
+```
 
----
+### 注意事项
 
-## 📝 常见问题 (FAQ)
-- **Q: 为什么日历显示的节假日不准？**
-  - A: 系统使用的是 `chinese-days` 库，请确保定期更新容器镜像以获取最新的法定假日数据。
-- **Q: 中午锁屏会触发打卡吗？**
-  - A: 默认脚本设置了 `hour >= 17` 才会触发，你可以在 `init.lua` 中根据需求调整。
-- **Q: 数据库如何迁移？**
-  - A: 只需拷贝整个 `data` 文件夹到新服务器即可。
+⚠️ **生产模式启动前，请确保已构建前端：**
+```bash
+npm run build
+# 这会构建 client/dist 目录
+```

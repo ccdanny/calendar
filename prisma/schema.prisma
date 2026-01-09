@@ -1,0 +1,19 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Record {
+  id           Int      @id @default(autoincrement())
+  date         String   @unique // Format: YYYY-MM-DD
+  type         String   @default("WORK") // WORK, OVERTIME, LEAVE
+  clockOutTime DateTime?
+  duration     Float?   // Overtime hours or leave hours
+  note         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
